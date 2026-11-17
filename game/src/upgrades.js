@@ -1,0 +1,1 @@
+export const upgrades=[{name:'LONG EXPOSURE',detail:'Light ribbons last 60% longer',apply:w=>w.duration*=1.6},{name:'PULSE ENGINE',detail:'Shoot 35% faster',apply:w=>w.rate*=.65},{name:'SECOND WIND',detail:'Restore one hull • increase thrust',apply:w=>{w.lives=Math.min(3,w.lives+1);w.power+=160}}];

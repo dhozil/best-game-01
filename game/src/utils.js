@@ -1,0 +1,1 @@
+let seed=1;export function setSeed(n){seed=n||1}export function rng(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}export const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
