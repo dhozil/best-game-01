@@ -1,4 +1,46 @@
-import{dist,clamp,rng}from './utils.js';import{feedback,updateParticles}from './particles.js';import{wave,spawn}from './waves.js';import{sound}from './audio.js';
-export function create(){return{p:{x:720,y:500,vx:0,vy:0},enemies:[],bullets:[],trail:[],particles:[],pickups:[],wave:0,remaining:0,spawn:0,score:0,combo:1,comboTime:0,lives:3,inv:2,trauma:0,stop:0,time:0,cool:0,duration:1.2,rate:.34,power:920,break:0}}
-export function update(w,dt,i,auto=false){w.time+=dt;w.trauma=Math.max(0,w.trauma-dt*1.5);updateParticles(w,dt);if(w.stop>0){w.stop-=dt;return}let p=w.p;let dx=(i.keys.d||i.keys.arrowright?1:0)-(i.keys.a||i.keys.arrowleft?1:0),dy=(i.keys.s||i.keys.arrowdown?1:0)-(i.keys.w||i.keys.arrowup?1:0);if(auto){dx=Math.cos(w.time*.85);dy=Math.sin(w.time*.85)}p.vx+=(dx*w.power-p.vx*2.1)*dt;p.vy+=(dy*w.power-p.vy*2.1)*dt;p.x=clamp(p.x+p.vx*dt,60,1380);p.y=clamp(p.y+p.vy*dt,160,865);w.inv-=dt;w.cool-=dt;w.comboTime-=dt;if(w.comboTime<0)w.combo=1;if(Math.hypot(p.vx,p.vy)>180)w.trail.push({x:p.x,y:p.y,life:w.duration});w.trail=w.trail.filter(t=>(t.life-=dt)>0);if((i.fire||auto)&&w.cool<0){let target=auto?(w.enemies[0]||{x:1000,y:400}):i,a=Math.atan2(target.y-p.y,target.x-p.x);w.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*750,vy:Math.sin(a)*750,life:1.6});w.cool=w.rate;sound('shoot')}for(let b of w.bullets){b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt}w.bullets=w.bullets.filter(b=>b.life>0);w.spawn-=dt;if(w.remaining>0&&w.spawn<0){spawn(w);w.spawn=.55}for(let e of w.enemies){e.age+=dt;e.flash-=dt;let a=Math.atan2(p.y-e.y,p.x-e.x)+(e.type===1?.9:0),speed=e.type===3?65:95+w.wave*7;e.x+=Math.cos(a)*speed*dt;e.y+=Math.sin(a)*speed*dt;for(let b of w.bullets)if(b.life>0&&dist(e,b)<e.r+6){b.life=0;e.hp--;e.flash=.12;sound('hit')}if(w.trail.some(t=>dist(t,e)<e.r+8)){e.hp-=dt*12;e.flash=.05}if(dist(e,p)<e.r+14&&w.inv<0){w.lives--;w.inv=2.5;p.vx=-Math.cos(a)*500;p.vy=-Math.sin(a)*500;feedback(w,3,p.x,p.y,'#8cffe0');sound('boom')}if(e.hp<=0){w.score+=Math.round((e.type===3?1200:100)*w.combo);w.combo=Math.min(8,w.combo+.25);w.comboTime=3;feedback(w,e.type===3?3:1,e.x,e.y,'#ff776f');sound('boom');if(e.type===2)for(let n=0;n<2;n++)w.pickups.push({x:e.x+rng()*50,y:e.y+rng()*50,life:8})}}w.enemies=w.enemies.filter(e=>e.hp>0);for(let q of w.pickups){q.life-=dt;if(dist(q,p)<32){q.life=0;w.score+=250;sound('pickup')}}w.pickups=w.pickups.filter(q=>q.life>0);if(!w.remaining&&!w.enemies.length)w.break+=dt;}
-export{wave};
+import {distance} from "./utils.js";
+import {burst} from "./particles.js";
+import {sound} from "./audio.js";
+export function create(rng){
+ return {rng,p:{x:640,y:400,vx:300,vy:0},enemies:[],wake:[],bolts:[],particles:[],gold:[],sector:1,score:0,hull:3,chain:1,timer:0,chainTime:3,wakeLife:2,damage:2,magnet:120,time:0,cool:0,inv:0,trauma:0,stop:0};
+}
+export function step(w,input,dt,auto){
+ w.time+=dt;w.stop=Math.max(0,w.stop-dt);w.trauma=Math.max(0,w.trauma-dt*2);
+ const t=dt*(w.stop>0?.15:1),p=w.p,k=input.keys;
+ let x=Number(k.has("d")||k.has("arrowright"))-Number(k.has("a")||k.has("arrowleft"));
+ let y=Number(k.has("s")||k.has("arrowdown"))-Number(k.has("w")||k.has("arrowup"));
+ if(auto){x=Math.cos(w.time);y=Math.sin(w.time);}
+ p.vx+=(x*400-p.vx)*(1-Math.exp(-3*t));p.vy+=(y*400-p.vy)*(1-Math.exp(-3*t));
+ p.x=Math.max(25,Math.min(1255,p.x+p.vx*t));p.y=Math.max(110,Math.min(755,p.y+p.vy*t));
+ w.wake.push({x:p.x,y:p.y,life:w.wakeLife,hot:Math.hypot(p.vx,p.vy)>160});
+ w.wake=w.wake.filter(a=>(a.life-=t)>0);
+ w.cool-=t;w.inv-=t;w.timer-=t;if(w.timer<=0)w.chain=1;
+ const target=auto?w.enemies[0]:input.mouse;
+ if(target&&(auto||input.mouse.down)&&w.cool<=0){
+ const a=Math.atan2(target.y-p.y,target.x-p.x);
+ w.bolts.push({x:p.x,y:p.y,vx:Math.cos(a)*700,vy:Math.sin(a)*700,life:2});w.cool=.3;if(!auto)sound(650);
+ }
+ for(const b of w.bolts){b.x+=b.vx*t;b.y+=b.vy*t;b.life-=t;}
+ const children=[];
+ for(const e of w.enemies){
+ e.flash=Math.max(0,e.flash-t);
+ const a=Math.atan2(p.y-e.y,p.x-e.x)+(e.type===1?.9:0),s=e.type===3?60:110;
+ e.x+=Math.cos(a)*s*t;e.y+=Math.sin(a)*s*t;
+ for(const b of w.bolts)if(b.life>0&&distance(b,e)<e.r+5){e.hp-=w.damage;e.flash=.1;b.life=0;}
+ if(w.wake.some(a=>a.hot&&distance(a,e)<e.r+9)){e.hp-=25*t;e.flash=.06;}
+ if(e.hp<=0){
+ w.chain++;w.timer=w.chainTime;w.score+=100*w.chain;w.trauma=.3;
+ if(e.type===3){w.stop=.06;w.trauma=1;}
+ burst(w,e.x,e.y,e.type===1?"#be9cff":"#ff756f");
+ w.gold.push({x:e.x,y:e.y});if(!auto)sound(220+w.chain*25);
+ if(e.type===2)for(const d of [-20,20])children.push({x:e.x+d,y:e.y,type:0,hp:1,r:9,flash:0});
+ }else if(distance(p,e)<e.r+13&&w.inv<=0){
+ w.hull--;w.inv=2;w.trauma=1;p.vx-=Math.cos(a)*500;p.vy-=Math.sin(a)*500;burst(w,p.x,p.y,"#6fffea");if(!auto)sound(90);
+ }
+ }
+ w.enemies=w.enemies.filter(e=>e.hp>0).concat(children);
+ w.bolts=w.bolts.filter(b=>b.life>0);
+ w.gold=w.gold.filter(g=>{const d=distance(g,p);if(d<w.magnet){g.x+=(p.x-g.x)*(1-Math.exp(-8*t));g.y+=(p.y-g.y)*(1-Math.exp(-8*t));}if(d<20){w.score+=50;return false;}return true;});
+ w.particles=w.particles.filter(a=>(a.life-=t)>0);
+ for(const a of w.particles){a.x+=a.vx*t;a.y+=a.vy*t;a.vx*=Math.exp(-3*t);a.vy*=Math.exp(-3*t);}
+}

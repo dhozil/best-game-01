@@ -1,1 +1,3 @@
-import{rng}from './utils.js';export function feedback(w,tier,x,y,color){w.trauma=Math.min(1,w.trauma+tier*.22);if(tier>1)w.stop=.045;for(let i=0;i<tier*12;i++){let a=rng()*Math.PI*2,s=40+rng()*240;w.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.4+rng()*.5,color})}}export function updateParticles(w,dt){w.particles=w.particles.filter(p=>(p.life-=dt)>0);for(let p of w.particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.98;p.vy*=.98}}
+export function burst(w,x,y,color){
+ for(let i=0;i<24;i++){const a=w.rng()*7,s=80+w.rng()*200;w.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,color});}
+}

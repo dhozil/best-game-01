@@ -1,1 +1,7 @@
-export const input={keys:{},x:900,y:400,fire:false};export function bind(canvas){window.addEventListener('keydown',e=>{input.keys[e.key.toLowerCase()]=true;if(['ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault()});window.addEventListener('keyup',e=>input.keys[e.key.toLowerCase()]=false);canvas.addEventListener('pointermove',e=>{let r=canvas.getBoundingClientRect();input.x=(e.clientX-r.left)*1440/r.width;input.y=(e.clientY-r.top)*960/r.height});canvas.addEventListener('pointerdown',()=>input.fire=true);window.addEventListener('pointerup',()=>input.fire=false)}
+export const keys=new Set();
+export const mouse={x:640,y:400,down:false};
+addEventListener("keydown",e=>keys.add(e.key.toLowerCase()));
+addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
+addEventListener("mousemove",e=>{mouse.x=e.clientX/innerWidth*1280;mouse.y=e.clientY/innerHeight*800;});
+addEventListener("mousedown",()=>mouse.down=true);
+addEventListener("mouseup",()=>mouse.down=false);
